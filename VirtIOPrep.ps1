@@ -8,7 +8,7 @@ Write-Host "              VirtIOPrep v1.0"
 Write-Host "==============================================" -ForegroundColor Cyan
 Write-Host ""
 
-$DriverRoot = Join-Path $PSScriptRoot "drivers"
+$DriverRoot = "$env:TEMP\VirtIOPrep\drivers"
 
 if (!(Test-Path $DriverRoot)) {
     Write-Host "[ERROR] Drivers folder not found." -ForegroundColor Red
