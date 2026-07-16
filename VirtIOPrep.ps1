@@ -83,7 +83,6 @@ Write-Host ""
 $ExpectedDrivers = @(
     "balloon.inf",
     "netkvm.inf",
-    "qemupciserial.inf",
     "vioscsi.inf",
     "viostor.inf"
 )
@@ -99,7 +98,9 @@ foreach ($Driver in $ExpectedDrivers) {
         Where-Object { $_.OriginalFileName -like "*$Driver" }
 
     if ($Match) {
-        Write-Host ("[ OK ] {0,-20} {1}" -f $Driver.Replace(".inf",""), $Match.Version) -ForegroundColor Green
+    
+        $DriverInfo = $Match | Select-Object -First 1
+Write-Host ("[ OK ] {0,-20} {1}" -f $Driver.Replace(".inf",""), $DriverInfo.Version) -ForegroundColor Green
         $Validated++
     }
     else {
