@@ -19,18 +19,28 @@ if (!(Test-Path $DriverRoot)) {
 
 $Caption = (Get-CimInstance Win32_OperatingSystem).Caption
 
-switch -Wildcard ($Caption) {
-    "Microsoft Windows Server 2016*" { $OS = "2k16" }
-    "Microsoft Windows Server 2019*" { $OS = "2k19" }
-    "Microsoft Windows Server 2022*" { $OS = "2k22" }
-    "Microsoft Windows 10*"          { $OS = "w10" }
-    "Microsoft Windows 11*"          { $OS = "w11" }
-
-    default {
-        Write-Host "[ERROR] Unsupported operating system:" -ForegroundColor Red
-        Write-Host $Caption
-        exit 1
-    }
+if ($Caption.Contains("Server 2016")) {
+    $OS = "2k16"
+}
+elseif ($Caption.Contains("Server 2019")) {
+    $OS = "2k19"
+}
+elseif ($Caption.Contains("Server 2022")) {
+    $OS = "2k22"
+}
+elseif ($Caption.Contains("Server 2025")) {
+    $OS = "2k22"
+}
+elseif ($Caption.Contains("Windows 10")) {
+    $OS = "w10"
+}
+elseif ($Caption.Contains("Windows 11")) {
+    $OS = "w11"
+}
+else {
+    Write-Host "[ERROR] Unsupported operating system:" -ForegroundColor Red
+    Write-Host $Caption
+    exit 1
 }
 
 Write-Host "Detected OS : $Caption" -ForegroundColor Green
