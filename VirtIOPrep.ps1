@@ -4,14 +4,15 @@ Clear-Host
 
 Write-Host ""
 Write-Host "==========================================" -ForegroundColor Cyan
-Write-Host "           VirtIOPrep v0.1"
+Write-Host "           VirtIOPrep v1.0"
 Write-Host "==========================================" -ForegroundColor Cyan
 Write-Host ""
 
 $DriverRoot = Join-Path $PSScriptRoot "drivers"
 
 if (!(Test-Path $DriverRoot)) {
-    throw "Drivers folder not found."
+    Write-Host "Drivers folder not found." -ForegroundColor Red
+    exit 1
 }
 
 $OS = Get-CimInstance Win32_OperatingSystem
@@ -34,31 +35,69 @@ foreach ($Key in $DriverMap.Keys) {
 }
 
 if (!$DriverOS) {
-    throw "Unsupported operating system: $($OS.Caption)"
+    Write-Host "Unsupported OS: $($OS.Caption)" -ForegroundColor Red
+    exit 1
 }
 
-Write-Host "Detected OS: $($OS.Caption)" -ForegroundColor Green
-Write-Host "Using driver set: $DriverOS"
+Write-Host "Detected: $($OS.Caption)"
+Write-Host "Driver Set: $DriverOS"
 Write-Host ""
 
-$Installed = 0
+$Success = 0
+$Failed = 0
 
 Get-ChildItem $DriverRoot -Directory | ForEach-Object {
 
+    $DriverName = $_.Name
     $Folder = Join-Path $_.FullName "$DriverOS\amd64"
 
-    if (Test-Path $Folder) {
+    if (!(Test-Path $Folder)) {
+        Write-Host "[SKIP] $DriverName (no driver for this OS)" -ForegroundColor Yellow
+        return
+    }
 
-        Write-Host "Installing $($_.Name)..."
+    $InfFiles = Get-ChildItem $Folder -Filter *.inf
 
-        pnputil /add-driver "$Folder\*.inf" /subdirs /install
+    foreach ($Inf in $InfFiles) {
 
-        $Installed++
+        Write-Host "[INFO] Installing $DriverName..."
+
+        $Result = pnputil /add-driver $Inf.FullName /install 2>&1
+
+        if ($LASTEXITCODE -eq 0) {
+
+            Write-Host "[ OK ] $DriverName" -ForegroundColor Green
+            $Success++
+
+        }
+        else {
+
+            Write-Host "[FAIL] $DriverName" -ForegroundColor Red
+            $Result
+            $Failed++
+
+        }
     }
 }
 
 Write-Host ""
-Write-Host "==========================================" -ForegroundColor Green
-Write-Host "$Installed driver packages processed."
-Write-Host "VM is ready for VirtIO migration."
-Write-Host "==========================================" -ForegroundColor Green
+Write-Host "=========================================="
+
+Write-Host "Installed : $Success"
+
+Write-Host "Failed    : $Failed"
+
+if ($Failed -eq 0) {
+
+    Write-Host ""
+    Write-Host "VM ready for Proxmox migration." -ForegroundColor Green
+    exit 0
+
+}
+else{
+
+    Write-Host ""
+    Write-Host "One or more drivers failed." -ForegroundColor Red
+    exit 1
+
+}
