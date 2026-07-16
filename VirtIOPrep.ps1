@@ -1,30 +1,49 @@
 #Requires -RunAsAdministrator
 
-$Version = "v0.1.0"
-
-$Temp = "$env:TEMP\VirtIOPrep"
-$Zip = "$Temp\drivers.zip"
-
-$Repo = "https://github.com/vitorlube/VirtIOPrep/releases/download/$Version/drivers.zip"
-
 Write-Host ""
-Write-Host "=== VirtIOPrep ==="
+Write-Host "VirtIOPrep v0.1"
 Write-Host ""
 
-New-Item -ItemType Directory -Force -Path $Temp | Out-Null
+$DriverRoot = Join-Path $PSScriptRoot "drivers"
 
-Write-Host "Downloading drivers..."
-Invoke-WebRequest $Repo -OutFile $Zip
+if (!(Test-Path $DriverRoot)) {
+    throw "Drivers folder not found."
+}
 
-Write-Host "Extracting..."
-Expand-Archive $Zip $Temp -Force
+$Build = [Environment]::OSVersion.Version.Build
 
-Write-Host "Installing drivers..."
-pnputil /add-driver "$Temp\drivers\*.inf" /subdirs /install
+switch ($Build) {
 
-Write-Host "Cleaning..."
-Remove-Item $Temp -Recurse -Force
+    {$_ -ge 26100} {$OS="w11";break}
+    {$_ -ge 22000} {$OS="w11";break}
+    {$_ -ge 20348} {$OS="2k22";break}
+    {$_ -ge 17763} {$OS="2k19";break}
+    {$_ -ge 14393} {$OS="2k16";break}
+
+    default{
+        throw "Unsupported Windows Build: $Build"
+    }
+}
+
+Write-Host "Detected OS: $OS"
+Write-Host ""
+
+$Installed = 0
+
+Get-ChildItem $DriverRoot -Directory | ForEach-Object{
+
+    $Folder = Join-Path $_.FullName "$OS\amd64"
+
+    if(Test-Path $Folder){
+
+        Write-Host "Installing $($_.Name)..."
+
+        pnputil /add-driver "$Folder\*.inf" /subdirs /install | Out-Null
+
+        $Installed++
+    }
+}
 
 Write-Host ""
-Write-Host "Done!"
-Write-Host "Your VM is ready for VirtIO migration."
+Write-Host "$Installed driver packages processed."
+Write-Host "Done."
