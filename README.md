@@ -1,104 +1,84 @@
 # VirtIOPrep
 
-Prepare Windows virtual machines for migration to Proxmox VE and other KVM-based hypervisors.
+Prepare Windows virtual machines for seamless VMware → Proxmox migration by preloading VirtIO drivers.
 
-VirtIOPrep automatically detects the Windows version and installs the required Red Hat VirtIO drivers into the Windows Driver Store, allowing the VM to boot after changing the virtual storage controller.
-
----
-
-## Features
-
-- Automatic Windows version detection
-- Installs the correct VirtIO drivers
-- Supports:
-  - Balloon
-  - NetKVM
-  - QEMU PCI Serial
-  - VirtIO SCSI
-  - VirtIO Block (viostor)
-- Offline installation
-- No VMware Tools modifications
-- No reboot required before migration (recommended afterwards)
+VirtIOPrep automatically detects the operating system, installs the required VirtIO drivers into the Windows Driver Store, validates the installation, and prepares the VM for migration.
 
 ---
 
 ## Supported Operating Systems
 
-- Windows Server 2016
-- Windows Server 2019
-- Windows Server 2022
+- Windows Server 2016 x64
+- Windows Server 2019 x64
+- Windows Server 2022 x64
+- Windows Server 2025 x64
 - Windows 10 x64
 - Windows 11 x64
 
 ---
 
-## Usage
+## Included Drivers
 
-Run PowerShell as Administrator.
+- Balloon
+- NetKVM
+- VirtIO SCSI
+- VirtIO Block
+- QEMU PCI Serial
+
+---
+
+## Features
+
+- Automatic OS detection
+- Automatic driver selection
+- No VirtIO ISO required
+- No manual driver installation
+- No DISM commands
+- No Device Manager interaction
+- Automatic validation
+- One-command installation
+- Optimized for VMware → Proxmox migrations
+
+---
+
+# Quick Start
+
+Open **PowerShell as Administrator**.
+
+If PowerShell blocks script execution, allow scripts for the current session only:
 
 ```powershell
 Set-ExecutionPolicy Bypass -Scope Process -Force
-.\VirtIOPrep.ps1
 ```
+
+Then run:
+
+```powershell
+irm https://raw.githubusercontent.com/vitorlube/VirtIOPrep/main/install.ps1 | iex
+```
+
+That's it.
+
+The installer will automatically:
+
+- Download the latest VirtIOPrep release
+- Download the required VirtIO driver package
+- Extract the files
+- Install the drivers into the Windows Driver Store
+- Validate the installation
+- Remove temporary files
 
 ---
 
-## Example
+## Typical Migration Workflow
 
-```
-==============================================
-              VirtIOPrep v1.0
-==============================================
+1. Run VirtIOPrep inside the VMware virtual machine.
+2. Wait for the installation to complete.
+3. Shut down the virtual machine.
+4. Restore or migrate the VM to Proxmox using VirtIO controllers.
+5. Power on the VM.
 
-Detected OS : Windows Server 2022
-
-Installing Balloon...
-OK
-
-Installing NetKVM...
-OK
-
-Installing QEMU PCI Serial...
-OK
-
-Installing VirtIO SCSI...
-OK
-
-Installing VirtIO Block...
-OK
-
-VirtIO drivers successfully staged.
-
-A reboot is recommended before migrating the VM.
-```
-
----
-
-## What it does
-
-VirtIOPrep stages the required VirtIO drivers in the Windows Driver Store before migration.
-
-It does **not** migrate the virtual machine.
-
-Migration can be performed using:
-
-- Veeam Backup & Replication
-- Proxmox Backup Server
-- Disk conversion
-- Manual migration
-- Any VMware → Proxmox workflow
-
----
-
-## Why?
-
-Migrating a Windows VM directly from VMware to VirtIO storage usually results in:
-
-```
-INACCESSIBLE_BOOT_DEVICE
-```
-
-VirtIOPrep prevents this by installing the required drivers before the migration.
+Windows will automatically detect the VirtIO devices during the first boot.
 
 ---
 
@@ -106,26 +86,22 @@ VirtIOPrep prevents this by installing the required drivers before the migration
 
 ```
 VirtIOPrep
-│
+├── install.ps1
 ├── VirtIOPrep.ps1
-└── drivers
-    ├── Balloon
-    ├── NetKVM
-    ├── qemupciserial
-    ├── vioscsi
-    └── viostor
+└── drivers.zip
 ```
+
+---
+
+## Notes
+
+- Administrator privileges are required.
+- Internet access is required during installation.
+- VirtIOPrep installs the drivers into the Windows Driver Store so they are available after migration.
+- No reboot is required before shutting down and migrating the VM.
 
 ---
 
 ## License
 
 MIT License
-
----
-
-## Disclaimer
-
-VirtIO drivers are developed and distributed by Red Hat.
-
-This project only automates their installation and is not affiliated with Red Hat, VMware or Proxmox.
