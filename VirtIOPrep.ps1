@@ -63,7 +63,7 @@ foreach ($Driver in Get-ChildItem $DriverRoot -Directory) {
 
     foreach ($Inf in Get-ChildItem $Folder -Filter *.inf) {
 
-        pnputil /add-driver $Inf.FullName /install | Out-Null
+        pnputil /add-driver $Inf.FullName | Out-Null
 
         if ($LASTEXITCODE -eq 0) {
             Write-Host "[ OK ] $($Driver.Name)" -ForegroundColor Green
