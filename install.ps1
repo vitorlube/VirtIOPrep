@@ -2,32 +2,38 @@
 
 $ErrorActionPreference = "Stop"
 
-$Repo = "https://github.com/vitorlube/VirtIOPrep/releases/latest/download"
-
 $Temp = Join-Path $env:TEMP "VirtIOPrep"
 
 Remove-Item $Temp -Recurse -Force -ErrorAction SilentlyContinue
-New-Item -ItemType Directory $Temp | Out-Null
+New-Item -ItemType Directory -Path $Temp | Out-Null
 
-Write-Host ""
-Write-Host "Downloading VirtIOPrep..." -ForegroundColor Cyan
+Write-Host "Downloading VirtIOPrep..."
 
-Invoke-WebRequest "$Repo/VirtIOPrep.ps1" -OutFile "$Temp\VirtIOPrep.ps1"
+Invoke-WebRequest `
+"https://github.com/vitorlube/VirtIOPrep/releases/latest/download/VirtIOPrep.ps1" `
+-OutFile "$Temp\VirtIOPrep.ps1"
 
-Write-Host "Downloading drivers..." -ForegroundColor Cyan
+Write-Host "Downloading drivers..."
 
-Invoke-WebRequest "$Repo/drivers.zip" -OutFile "$Temp\drivers.zip"
+Invoke-WebRequest `
+"https://github.com/vitorlube/VirtIOPrep/releases/latest/download/drivers.zip" `
+-OutFile "$Temp\drivers.zip"
 
-Write-Host "Extracting..." -ForegroundColor Cyan
+Write-Host "Extracting..."
 
-Expand-Archive "$Temp\drivers.zip" "$Temp" -Force
+Expand-Archive `
+"$Temp\drivers.zip" `
+"$Temp" `
+-Force
 
-Write-Host "Running VirtIOPrep..." -ForegroundColor Green
+Write-Host "Running VirtIOPrep..."
 
-& "$Temp\VirtIOPrep.ps1"
+Push-Location $Temp
 
-Write-Host ""
-
-Write-Host "Cleaning temporary files..." -ForegroundColor Yellow
-
-Remove-Item $Temp -Recurse -Force
+try {
+    & ".\VirtIOPrep.ps1"
+}
+finally {
+    Pop-Location
+    Remove-Item $Temp -Recurse -Force -ErrorAction SilentlyContinue
+}
