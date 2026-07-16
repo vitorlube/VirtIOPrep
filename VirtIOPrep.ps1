@@ -3,101 +3,120 @@
 Clear-Host
 
 Write-Host ""
-Write-Host "==========================================" -ForegroundColor Cyan
-Write-Host "           VirtIOPrep v1.0"
-Write-Host "==========================================" -ForegroundColor Cyan
+Write-Host "==============================================" -ForegroundColor Cyan
+Write-Host "              VirtIOPrep v1.0"
+Write-Host "==============================================" -ForegroundColor Cyan
 Write-Host ""
 
 $DriverRoot = Join-Path $PSScriptRoot "drivers"
 
 if (!(Test-Path $DriverRoot)) {
-    Write-Host "Drivers folder not found." -ForegroundColor Red
+    Write-Host "[ERROR] Drivers folder not found." -ForegroundColor Red
     exit 1
 }
 
-$OS = Get-CimInstance Win32_OperatingSystem
+$Caption = (Get-CimInstance Win32_OperatingSystem).Caption
 
-$DriverMap = @{
-    "Microsoft Windows Server 2016*" = "2k16"
-    "Microsoft Windows Server 2019*" = "2k19"
-    "Microsoft Windows Server 2022*" = "2k22"
-    "Microsoft Windows 10*"          = "w10"
-    "Microsoft Windows 11*"          = "w11"
-}
+switch -Wildcard ($Caption) {
 
-$DriverOS = $null
+    "Microsoft Windows Server 2016*" {$OS="2k16"}
+    "Microsoft Windows Server 2019*" {$OS="2k19"}
+    "Microsoft Windows Server 2022*" {$OS="2k22"}
+    "Microsoft Windows 10*" {$OS="w10"}
+    "Microsoft Windows 11*" {$OS="w11"}
 
-foreach ($Key in $DriverMap.Keys) {
-    if ($OS.Caption -like $Key) {
-        $DriverOS = $DriverMap[$Key]
-        break
+    default{
+        Write-Host "[ERROR] Unsupported operating system:"
+        Write-Host $Caption -ForegroundColor Red
+        exit 1
     }
 }
 
-if (!$DriverOS) {
-    Write-Host "Unsupported OS: $($OS.Caption)" -ForegroundColor Red
-    exit 1
-}
-
-Write-Host "Detected: $($OS.Caption)"
-Write-Host "Driver Set: $DriverOS"
+Write-Host "Detected OS : $Caption" -ForegroundColor Green
+Write-Host "Driver Set : $OS"
 Write-Host ""
 
-$Success = 0
-$Failed = 0
+$Success=0
+$Failed=0
 
-Get-ChildItem $DriverRoot -Directory | ForEach-Object {
+foreach($Driver in Get-ChildItem $DriverRoot -Directory){
 
-    $DriverName = $_.Name
-    $Folder = Join-Path $_.FullName "$DriverOS\amd64"
+    $Folder=Join-Path $Driver.FullName "$OS\amd64"
 
-    if (!(Test-Path $Folder)) {
-        Write-Host "[SKIP] $DriverName (no driver for this OS)" -ForegroundColor Yellow
-        return
+    if(!(Test-Path $Folder)){
+        Write-Host "[SKIP] $($Driver.Name)"
+        continue
     }
 
-    $InfFiles = Get-ChildItem $Folder -Filter *.inf
+    Write-Host "[INFO] Installing $($Driver.Name)..."
 
-    foreach ($Inf in $InfFiles) {
+    Get-ChildItem $Folder -Filter *.inf | ForEach-Object{
 
-        Write-Host "[INFO] Installing $DriverName..."
+        pnputil /add-driver $_.FullName /install | Out-Null
 
-        $Result = pnputil /add-driver $Inf.FullName /install 2>&1
+        if($LASTEXITCODE -eq 0){
 
-        if ($LASTEXITCODE -eq 0) {
-
-            Write-Host "[ OK ] $DriverName" -ForegroundColor Green
+            Write-Host "[ OK ] $($Driver.Name)" -ForegroundColor Green
             $Success++
 
         }
-        else {
+        else{
 
-            Write-Host "[FAIL] $DriverName" -ForegroundColor Red
-            $Result
+            Write-Host "[FAIL] $($Driver.Name)" -ForegroundColor Red
             $Failed++
 
         }
+
     }
+
 }
 
 Write-Host ""
-Write-Host "=========================================="
-
+Write-Host "==============================================" -ForegroundColor Cyan
 Write-Host "Installed : $Success"
-
 Write-Host "Failed    : $Failed"
+Write-Host ""
 
-if ($Failed -eq 0) {
+$Expected=@(
+"balloon.inf",
+"netkvm.inf",
+"vioscsi.inf",
+"viostor.inf"
+)
 
-    Write-Host ""
-    Write-Host "VM ready for Proxmox migration." -ForegroundColor Green
+$Installed=Get-WindowsDriver -Online |
+Where-Object ProviderName -match "Red Hat"
+
+$Ok=0
+
+foreach($Driver in $Expected){
+
+    if($Installed.OriginalFileName -match [regex]::Escape($Driver)){
+
+        Write-Host "[ OK ] $Driver" -ForegroundColor Green
+        $Ok++
+
+    }
+    else{
+
+        Write-Host "[FAIL] $Driver" -ForegroundColor Red
+
+    }
+
+}
+
+Write-Host ""
+
+if($Ok -eq $Expected.Count){
+
+    Write-Host "VirtIO drivers successfully staged." -ForegroundColor Green
+    Write-Host "A reboot is recommended before migrating the VM." -ForegroundColor Yellow
     exit 0
 
 }
 else{
 
-    Write-Host ""
-    Write-Host "One or more drivers failed." -ForegroundColor Red
+    Write-Host "Driver validation failed." -ForegroundColor Red
     exit 1
 
 }
