@@ -65,7 +65,9 @@ foreach ($Driver in Get-ChildItem $DriverRoot -Directory) {
 
         pnputil /add-driver $Inf.FullName | Out-Null
 
-        if ($LASTEXITCODE -eq 0) {
+        # 3010 = driver adicionado com sucesso, mas requer reboot. pnputil o retorna
+        # com frequencia; tratar como sucesso, senao um install bom vira [FAIL].
+        if ($LASTEXITCODE -eq 0 -or $LASTEXITCODE -eq 3010) {
             Write-Host "[ OK ] $($Driver.Name)" -ForegroundColor Green
             $InstalledCount++
         }

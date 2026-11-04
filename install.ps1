@@ -2,6 +2,11 @@
 
 $ErrorActionPreference = "Stop"
 
+# Forca TLS 1.2 (sem bor, nao derruba protocolos ja habilitados). Sem isto o
+# download do GitHub falha com "Could not create SSL/TLS secure channel" no
+# Windows Server 2016/2019 (PowerShell 5.1 / .NET usa TLS 1.0 por padrao).
+[Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
+
 $Temp = Join-Path $env:TEMP "VirtIOPrep"
 
 Remove-Item $Temp -Recurse -Force -ErrorAction SilentlyContinue
